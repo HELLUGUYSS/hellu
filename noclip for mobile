@@ -1,0 +1,64 @@
+-- NoClip Toggle
+local noclipEnabled = false
+local player = game:GetService("Players").LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local userInputService = game:GetService("UserInputService")
+
+-- UI Indicator (Tương thích cảm ứng)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = player:FindFirstChild("PlayerGui")
+
+local StatusIndicator = Instance.new("Frame")
+StatusIndicator.Size = UDim2.new(0, 50, 0, 50) -- Kích thước nút
+StatusIndicator.Position = UDim2.new(0.5, -25, 0.05, 0) -- Trung tâm màn hình
+StatusIndicator.BackgroundColor3 = Color3.fromRGB(200, 60, 60) -- Đỏ (Tắt)
+StatusIndicator.Active = true -- Kích hoạt di chuyển
+StatusIndicator.Parent = ScreenGui
+
+local dragging = false
+local dragStart, startPos
+
+-- Di chuyển bằng cảm ứng
+StatusIndicator.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = StatusIndicator.Position
+    end
+end)
+
+userInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.Touch then
+        local delta = input.Position - dragStart
+        StatusIndicator.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+userInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+-- Bật/Tắt NoClip khi chạm vào nút
+StatusIndicator.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        noclipEnabled = not noclipEnabled
+        
+        -- Đổi màu chỉ báo
+        StatusIndicator.BackgroundColor3 = noclipEnabled and Color3.fromRGB(60, 200, 60) or Color3.fromRGB(200, 60, 60)
+
+        print("NoClip:", noclipEnabled and "Bật" or "Tắt")
+    end
+end)
+
+-- Vòng lặp: Cập nhật trạng thái NoClip liên tục
+game:GetService("RunService").Stepped:Connect(function()
+    if noclipEnabled and character then
+        for _, part in pairs(character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
