@@ -1,0 +1,318 @@
+-- Decompiler will be improved VERY SOON!
+-- Decompiled with Konstant V2.1, a fast Luau decompiler made in Luau by plusgiant5 (https://discord.gg/wyButjTMhM)
+-- Decompiled on 2025-05-10 08:34:35
+-- Luau version 6, Types version 3
+-- Time taken: 0.006720 seconds
+
+local UserInputService_upvr = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService_upvr = game:GetService("TweenService")
+local RunService_upvr = game:GetService("RunService")
+local TrowelRemote_upvr = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("TrowelRemote")
+local GetFarm_upvr = require(ReplicatedStorage.Modules.GetFarm)
+local Notification_upvr = require(ReplicatedStorage.Modules.Notification)
+local LocalPlayer_upvr = game:GetService("Players").LocalPlayer
+local CurrentCamera_upvr = workspace.CurrentCamera
+local Trowel_Client_upvr = LocalPlayer_upvr.PlayerGui:WaitForChild("Trowel_Client")
+local var11_upvw
+local var12_upvw
+local var13_upvw
+local Highlight_upvr = script.Highlight
+local tbl_upvr = {}
+local var16_upvw = false
+local function _() -- Line 42, Named "GetTrowel"
+	--[[ Upvalues[1]:
+		[1]: LocalPlayer_upvr (readonly)
+	]]
+	local class_Tool_2 = LocalPlayer_upvr.Character:FindFirstChildOfClass("Tool")
+	local var18 = class_Tool_2
+	if var18 then
+		var18 = class_Tool_2.Name:match("Trowel")
+	end
+	return var18 and class_Tool_2
+end
+local function VerifyPlant_upvr(arg1) -- Line 49, Named "VerifyPlant"
+	--[[ Upvalues[2]:
+		[1]: GetFarm_upvr (readonly)
+		[2]: LocalPlayer_upvr (readonly)
+	]]
+	local var6_result1 = GetFarm_upvr(LocalPlayer_upvr)
+	if not var6_result1 then
+		return false
+	end
+	if not arg1:IsDescendantOf(var6_result1) then
+		return false
+	end
+	if not arg1:FindFirstChild("Grow") or not arg1:FindFirstChild("Fruits") or not arg1:FindFirstChild("Fruit_Spawn") or arg1.Parent.Name == "Fruits" or not arg1:FindFirstChild("ADD_DATA") then
+		return false
+	end
+	return true
+end
+local CollectionService_upvr = game:GetService("CollectionService")
+local function PickupRaycast_upvr(arg1) -- Line 59, Named "PickupRaycast"
+	--[[ Upvalues[2]:
+		[1]: CurrentCamera_upvr (readonly)
+		[2]: CollectionService_upvr (readonly)
+	]]
+	local any_ViewportPointToRay_result1 = CurrentCamera_upvr:ViewportPointToRay(arg1.X, arg1.Y)
+	local RaycastParams_new_result1 = RaycastParams.new()
+	RaycastParams_new_result1.FilterType = Enum.RaycastFilterType.Exclude
+	RaycastParams_new_result1.FilterDescendantsInstances = {CollectionService_upvr:GetTagged("ShovelIgnore")}
+	local workspace_Raycast_result1_2 = workspace:Raycast(any_ViewportPointToRay_result1.Origin, any_ViewportPointToRay_result1.Direction * 500, RaycastParams_new_result1)
+	if workspace_Raycast_result1_2 and workspace_Raycast_result1_2.Instance then
+		return workspace_Raycast_result1_2
+	end
+end
+local function PlacementRaycast_upvr(arg1) -- Line 73, Named "PlacementRaycast"
+	--[[ Upvalues[3]:
+		[1]: CurrentCamera_upvr (readonly)
+		[2]: GetFarm_upvr (readonly)
+		[3]: LocalPlayer_upvr (readonly)
+	]]
+	local any_ViewportPointToRay_result1_2 = CurrentCamera_upvr:ViewportPointToRay(arg1.X, arg1.Y)
+	local RaycastParams_new_result1_2 = RaycastParams.new()
+	RaycastParams_new_result1_2.FilterType = Enum.RaycastFilterType.Include
+	RaycastParams_new_result1_2.FilterDescendantsInstances = {GetFarm_upvr(LocalPlayer_upvr).Important.Plant_Locations:GetChildren()}
+	local workspace_Raycast_result1 = workspace:Raycast(any_ViewportPointToRay_result1_2.Origin, any_ViewportPointToRay_result1_2.Direction * 500, RaycastParams_new_result1_2)
+	if workspace_Raycast_result1 and workspace_Raycast_result1.Instance then
+		return workspace_Raycast_result1
+	end
+end
+local function Cancel_upvr() -- Line 87, Named "Cancel"
+	--[[ Upvalues[8]:
+		[1]: var11_upvw (read and write)
+		[2]: var16_upvw (read and write)
+		[3]: LocalPlayer_upvr (readonly)
+		[4]: TrowelRemote_upvr (readonly)
+		[5]: var12_upvw (read and write)
+		[6]: Notification_upvr (readonly)
+		[7]: tbl_upvr (readonly)
+		[8]: Highlight_upvr (readonly)
+	]]
+	if not var11_upvw or var16_upvw then
+	else
+		local var33 = var11_upvw
+		var11_upvw = nil
+		if LocalPlayer_upvr.Character:FindFirstChildOfClass("Humanoid") then
+			LocalPlayer_upvr.Character:FindFirstChildOfClass("Humanoid"):UnequipTools()
+		end
+		TrowelRemote_upvr:InvokeServer("Cancel", var12_upvw, var33)
+		Notification_upvr:CreateNotification(`Canceled moving {var33.Name}!`)
+		local var34 = tbl_upvr
+		if not var34 then
+			var34 = {}
+		end
+		for _, v in var34 do
+			v.CanCollide = true
+			v.CanQuery = true
+		end
+		Highlight_upvr.Adornee = nil
+	end
+end
+local ProximityPromptService_upvr = game:GetService("ProximityPromptService")
+local var37_upvw
+RunService_upvr.RenderStepped:Connect(function() -- Line 111
+	--[[ Upvalues[14]:
+		[1]: var12_upvw (read and write)
+		[2]: LocalPlayer_upvr (readonly)
+		[3]: Trowel_Client_upvr (readonly)
+		[4]: var11_upvw (read and write)
+		[5]: ProximityPromptService_upvr (readonly)
+		[6]: var37_upvw (read and write)
+		[7]: Cancel_upvr (readonly)
+		[8]: UserInputService_upvr (readonly)
+		[9]: PlacementRaycast_upvr (readonly)
+		[10]: var13_upvw (read and write)
+		[11]: PickupRaycast_upvr (readonly)
+		[12]: VerifyPlant_upvr (readonly)
+		[13]: Highlight_upvr (readonly)
+		[14]: TweenService_upvr (readonly)
+	]]
+	-- KONSTANTWARNING: Variable analysis failed. Output will have some incorrect variable assignments
+	local class_Tool = LocalPlayer_upvr.Character:FindFirstChildOfClass("Tool")
+	local var39 = class_Tool
+	if var39 then
+		var39 = class_Tool.Name:match("Trowel")
+	end
+	var12_upvw = var39 and class_Tool
+	if var11_upvw == nil then
+	else
+	end
+	Trowel_Client_upvr.Enabled = true
+	if var12_upvw ~= nil then
+	else
+	end
+	if ProximityPromptService_upvr.Enabled ~= true then
+		if var12_upvw ~= nil then
+		else
+		end
+		ProximityPromptService_upvr.Enabled = true
+	end
+	if var12_upvw then
+		if not var37_upvw then
+			var37_upvw = var12_upvw.Destroying:Once(function() -- Line 121
+				--[[ Upvalues[2]:
+					[1]: var37_upvw (copied, read and write)
+					[2]: Cancel_upvr (copied, readonly)
+				]]
+				var37_upvw:Disconnect()
+				var37_upvw = nil
+				Cancel_upvr()
+			end)
+		end
+		local any_GetMouseLocation_result1 = UserInputService_upvr:GetMouseLocation()
+		if var11_upvw then
+			local PlacementRaycast_upvr_result1 = PlacementRaycast_upvr(any_GetMouseLocation_result1)
+			if PlacementRaycast_upvr_result1 and PlacementRaycast_upvr_result1.Position then
+				var11_upvw:PivotTo(CFrame.new(PlacementRaycast_upvr_result1.Position) * CFrame.new(0, 3, 0) * var13_upvw.Rotation)
+			else
+				var11_upvw:PivotTo(var13_upvw)
+			end
+		end
+		local PickupRaycast_result1 = PickupRaycast_upvr(any_GetMouseLocation_result1)
+		if not PickupRaycast_result1 then
+		else
+			local Parent_2 = PickupRaycast_result1.Instance.Parent
+			if not VerifyPlant_upvr(Parent_2) then
+				Highlight_upvr.Adornee = nil
+				return
+			end
+			if Highlight_upvr.Adornee ~= Parent_2 then
+				Highlight_upvr.FillTransparency = 1
+				TweenService_upvr:Create(Highlight_upvr, TweenInfo.new(0.25), {
+					FillTransparency = 0.65;
+				}):Play()
+			end
+			Highlight_upvr.Adornee = Parent_2
+		end
+	end
+	if var11_upvw then
+		Cancel_upvr()
+	end
+	Highlight_upvr.Adornee = nil
+end)
+Trowel_Client_upvr.Frame:WaitForChild("Cancel").Activated:Connect(Cancel_upvr)
+local Default_upvr = require(ReplicatedStorage.Modules.EffectController.Libraries.Default)
+local function ProcessInput(arg1, arg2) -- Line 168
+	--[[ Upvalues[18]:
+		[1]: LocalPlayer_upvr (readonly)
+		[2]: var16_upvw (read and write)
+		[3]: Notification_upvr (readonly)
+		[4]: UserInputService_upvr (readonly)
+		[5]: var11_upvw (read and write)
+		[6]: PlacementRaycast_upvr (readonly)
+		[7]: GetFarm_upvr (readonly)
+		[8]: Highlight_upvr (readonly)
+		[9]: var13_upvw (read and write)
+		[10]: RunService_upvr (readonly)
+		[11]: TweenService_upvr (readonly)
+		[12]: TrowelRemote_upvr (readonly)
+		[13]: var12_upvw (read and write)
+		[14]: Default_upvr (readonly)
+		[15]: CurrentCamera_upvr (readonly)
+		[16]: tbl_upvr (readonly)
+		[17]: PickupRaycast_upvr (readonly)
+		[18]: VerifyPlant_upvr (readonly)
+	]]
+	-- KONSTANTERROR: [0] 1. Error Block 1 start (CF ANALYSIS FAILED)
+	local var51
+	-- KONSTANTERROR: [0] 1. Error Block 1 end (CF ANALYSIS FAILED)
+	-- KONSTANTERROR: [4] 4. Error Block 60 start (CF ANALYSIS FAILED)
+	local class_Tool_3 = LocalPlayer_upvr.Character:FindFirstChildOfClass("Tool")
+	local var53 = class_Tool_3
+	if var53 then
+		var53 = class_Tool_3.Name:match("Trowel")
+	end
+	var51 = var53 and class_Tool_3
+	if not var51 or arg2 then
+		-- KONSTANTERROR: [22] 18. Error Block 6 start (CF ANALYSIS FAILED)
+		do
+			return
+		end
+		-- KONSTANTERROR: [22] 18. Error Block 6 end (CF ANALYSIS FAILED)
+	end
+	var51 = var16_upvw
+	if var51 then
+		var51 = Notification_upvr:CreateNotification
+		var51("Please wait before trying again!")
+		return
+	end
+	var51 = arg1
+	if not var51 then
+		var51 = UserInputService_upvr:GetMouseLocation()
+	end
+	if var11_upvw then
+		local PlacementRaycast_result1_upvr = PlacementRaycast_upvr(var51)
+  if PlacementRaycast_result1_upvr then
+			local RaycastParams_new_result1_3 = RaycastParams.new()
+			RaycastParams_new_result1_3.FilterType = Enum.RaycastFilterType.Include
+			RaycastParams_new_result1_3.FilterDescendantsInstances = {GetFarm_upvr(LocalPlayer_upvr).Important.Plants_Physical:GetChildren()}
+			if workspace:Raycast(PlacementRaycast_result1_upvr.Position + Vector3.new(0, 20, 0), Vector3.new(0, -25, 0), RaycastParams_new_result1_3) then return end
+			Highlight_upvr.Adornee = nil
+			var16_upvw = true
+			task.spawn(function() -- Line 205
+				--[[ Upvalues[11]:
+					[1]: PlacementRaycast_result1_upvr (readonly)
+					[2]: var13_upvw (copied, read and write)
+					[3]: var11_upvw (copied, read and write)
+					[4]: RunService_upvr (copied, readonly)
+					[5]: TweenService_upvr (copied, readonly)
+					[6]: TrowelRemote_upvr (copied, readonly)
+					[7]: var12_upvw (copied, read and write)
+					[8]: Notification_upvr (copied, readonly)
+					[9]: Default_upvr (copied, readonly)
+					[10]: CurrentCamera_upvr (copied, readonly)
+					[11]: var16_upvw (copied, read and write)
+				]]
+				local var58 = CFrame.new(PlacementRaycast_result1_upvr.Position) * CFrame.new(0, 3, 0) * var13_upvw.Rotation
+				local var59 = CFrame.new(PlacementRaycast_result1_upvr.Position.X, var13_upvw.Y, PlacementRaycast_result1_upvr.Position.Z) * var13_upvw.Rotation
+				local var60 = var11_upvw
+				var60:PivotTo(var58)
+				local const_number = 0
+				while const_number < 0.15 do
+					var60:PivotTo(var58:Lerp(var59, TweenService_upvr:GetValue((const_number + RunService_upvr.Heartbeat:Wait()) / 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In)))
+				end
+				TrowelRemote_upvr:InvokeServer("Place", var12_upvw, var60, var59)
+				Notification_upvr:CreateNotification(`Successfully moved {var60.Name}!`)
+				Default_upvr:SetScale(Default_upvr:CreateEffect({
+					Object = script.Place;
+					Emit = true;
+					Position = PlacementRaycast_result1_upvr.Position;
+					DebrisTime = 1;
+				}), 3, {})
+				Default_upvr:PlaySound(script.PlantTrowel, CurrentCamera_upvr)
+				task.wait(1)
+				var16_upvw = false
+			end)
+			local var63 = tbl_upvr
+			if not var63 then
+				var63 = {}
+			end
+			for _, v_2 in var63 do
+				v_2.CanCollide = true
+				v_2.CanQuery = true
+			end
+			var11_upvw = nil
+		end
+	end
+	PlacementRaycast_result1_upvr = PickupRaycast_upvr(var51)
+	local var64 = PlacementRaycast_result1_upvr
+	if not var64 then return end
+	local Parent = var64.Instance.Parent
+	if not VerifyPlant_upvr(Parent) then
+		Notification_upvr:CreateNotification("Can't move this!")
+		return
+	end
+	var16_upvw = true
+	TrowelRemote_upvr:InvokeServer("Pickup", var12_upvw, Parent)
+	var16_upvw = false
+	Notification_upvr:CreateNotification(`Picked up {Parent.Name}!`)
+	var13_upvw = Parent:GetPivot()
+	local _, _, NONE = Parent:GetDescendants()
+	-- KONSTANTERROR: [4] 4. Error Block 60 end (CF ANALYSIS FAILED)
+end
+if UserInputService_upvr.TouchEnabled then
+	UserInputService_upvr.TouchTapInWorld:Connect(ProcessInput)
+else
+	LocalPlayer_upvr:GetMouse().Button1Down:Connect(ProcessInput)
+end
