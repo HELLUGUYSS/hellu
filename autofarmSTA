@@ -28,9 +28,11 @@ local function resetAndPlayAgain()
 
     for i = 1, 2 do
         VIM:SendKeyEvent(true, Enum.KeyCode.R, false, game)
-        task.wait(1)
+        task.wait(0.3)
+        VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+        task.wait(0.3)
     end
-    task.wait(1)
+    task.wait(0.3)
 
     local screen = workspace.CurrentCamera.ViewportSize
     for i = 1, 2 do
