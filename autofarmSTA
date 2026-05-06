@@ -1,5 +1,60 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- 1. Hàm tìm đúng cái bảng điện Nhà Máy
+local function getPowerPlantTarget()
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    
+    local target, dist = nil, math.huge
+    for _, v in pairs(workspace:GetDescendants()) do
+        -- Chỉ tìm ProximityPrompt đang bật
+        if v:IsA("ProximityPrompt") and v.Enabled then
+            -- LỌC CHÍNH XÁC: Chỉ lấy cái có chữ "Repair" hoặc "Power"
+            local text = (v.ActionText .. v.ObjectText):lower()
+            if text:find("repair") or text:find("power") then
+                local p = v.Parent:IsA("BasePart") and v.Parent or v.Parent:FindFirstChildWhichIsA("BasePart", true)
+                if p then
+                    local d = (char.HumanoidRootPart.Position - p.Position).Magnitude
+                    -- Ưu tiên cái gần nhân vật nhất trong số các bảng điện
+                    if d < dist then 
+                        dist = d
+                        target = p 
+                    end
+                end
+            end
+        end
+    end
+    return target
+end
+
+local targetPart = getPowerPlantTarget()
+
+-- 2. GHIM NHÌN (Chỉ xoay cam, không tách rời thân)
+if targetPart then
+    print("🎯 Đã tìm đúng mục tiêu: " .. targetPart.Name)
+    RunService.RenderStepped:Connect(function()
+        if targetPart and targetPart.Parent and player.Character then
+            -- Lấy vị trí camera hiện tại (đang bám theo người)
+            local currentPos = camera.CFrame.Position
+            -- Ép ống kính nhìn thẳng vào bảng điện
+            camera.CFrame = CFrame.lookAt(currentPos, targetPart.Position)
+        end
+    end)
+else
+    print("⚠️ Không tìm thấy bảng điện nào quanh đây!")
+end
+
+
+
+
+
+
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local VIM = game:GetService("VirtualInputManager")
 local GuiService = game:GetService("GuiService")
 local player = Players.LocalPlayer
