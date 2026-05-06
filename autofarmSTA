@@ -1,0 +1,179 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local VIM = game:GetService("VirtualInputManager")
+local GuiService = game:GetService("GuiService")
+local player = Players.LocalPlayer
+
+-- Hàm kích hoạt Prompt an toàn
+local function interact(prompt)
+    if fireproximityprompt then
+        fireproximityprompt(prompt)
+    else
+        task.spawn(function()
+            prompt:InputHoldBegin()
+            task.wait(prompt.HoldDuration + 0.1)
+            prompt:InputHoldEnd()
+        end)
+    end
+end
+
+-- HÀM RESET XONG MỚI ĐỢI NHẤN PLAY AGAIN
+local function resetAndPlayAgain()
+    print("⌨️ Bước 1: Đang thực hiện chuỗi Reset...")
+    task.wait(0.5)
+
+    -- Thực hiện Reset qua Menu
+    VIM:SendKeyEvent(true, Enum.KeyCode.Escape, false, game)
+    task.wait(0.5)
+
+    for i = 1, 2 do
+        VIM:SendKeyEvent(true, Enum.KeyCode.R, false, game)
+        task.wait(1)
+    end
+    task.wait(1)
+
+    local screen = workspace.CurrentCamera.ViewportSize
+    for i = 1, 2 do
+        VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+        task.wait(1)
+        VIM:SendMouseButtonEvent(screen.X / 2, screen.Y / 2, 0, true, game, 1)
+        task.wait(0.1)
+        VIM:SendMouseButtonEvent(screen.X / 2, screen.Y / 2, 0, false, game, 1)
+        task.wait(0.5)
+    end
+
+    -- Bước 2: Đợi hiện bảng để nhấn Play Again
+    print("⏳ Bước 2: Đợi bảng Play Again xuất hiện...")
+    local clicked = false
+    while not clicked do
+        local pGui = player:FindFirstChild("PlayerGui")
+        if pGui then
+            for _, v in pairs(pGui:GetDescendants()) do
+                -- Tìm nút Play Again đang hiển thị
+                if v:IsA("TextButton") and v.Text:find("Play Again") and v.Visible then
+                    print("🎯 Đã thấy nút! Chờ 2 giây...")
+                    task.wait(2) -- Đợi đúng 2 giây theo yêu cầu
+                    
+                    -- Thực hiện nhấn
+                    GuiService.SelectedObject = v
+                    VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                    task.wait(0.1)
+                    VIM:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                    
+                    -- Click dự phòng
+                    VIM:SendMouseButtonEvent(screen.X / 2, screen.Y / 2, 0, true, game, 1)
+                    task.wait(0.1)
+                    VIM:SendMouseButtonEvent(screen.X / 2, screen.Y / 2, 0, false, game, 1)
+                    
+                    print("✅ Đã nhấn Play Again!")
+                    clicked = true
+                    break
+                end
+            end
+        end
+        task.wait(1) -- Quét mỗi giây 1 lần
+    end
+end
+
+local function startAutoFarm()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local root = char:WaitForChild("HumanoidRootPart", 10)
+    local hum = char:WaitForChild("Humanoid", 10)
+    
+    if not root or not hum then return end
+
+    local function getTarget()
+        local best, minDist = nil, math.huge
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("ProximityPrompt") and v.Enabled then
+                local info = (v.ActionText .. v.ObjectText):lower()
+                if info:find("repair") or info:find("power") then
+                    local p = v.Parent:IsA("BasePart") and v.Parent or v.Parent:FindFirstChildWhichIsA("BasePart", true)
+                    if p then
+                        local d = (root.Position - p.Position).Magnitude
+                        if d < minDist then minDist = d; best = v end
+                    end
+                end
+            end
+        end
+        return best
+    end
+
+    local prompt = getTarget()
+    if prompt then
+        prompt.HoldDuration = 0
+        local targetPart = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart", true)
+        
+        local floor = Instance.new("Part", workspace)
+        floor.Size = Vector3.new(15, 0.2, 15)
+        floor.Anchored, floor.CanCollide = true, true
+        floor.Transparency = 0.8
+        floor.Color = Color3.new(0, 1, 1)
+
+        local connection
+        connection = RunService.Stepped:Connect(function()
+            if not char or not root or not prompt.Parent or not hum then 
+                if floor then floor:Destroy() end
+                if connection then connection:Disconnect() end
+                return 
+            end
+
+            floor.CFrame = root.CFrame * CFrame.new(0, -3, 0)
+            
+            -- QUÉT TƯỜNG (Sát 1 stud mới chậm)
+            local isInsideWall = false
+            local rParams = RaycastParams.new()
+            rParams.FilterDescendantsInstances = {char, floor}
+            rParams.FilterType = Enum.RaycastFilterType.Blacklist
+            local rayOrigin = root.Position + Vector3.new(0, 1.5, 0) 
+            local rayFront = workspace:Raycast(rayOrigin, root.CFrame.LookVector * 1, rParams)
+
+            local oParams = OverlapParams.new()
+            oParams.FilterDescendantsInstances = {char, floor}
+            oParams.FilterType = Enum.RaycastFilterType.Blacklist
+            local checkCFrame = root.CFrame * CFrame.new(0, 1.5, 0)
+            local partsInBody = workspace:GetPartBoundsInBox(checkCFrame, Vector3.new(1.8, 1, 1.8), oParams)
+
+            if (rayFront and rayFront.Instance and rayFront.Instance.CanCollide) then
+                isInsideWall = true
+            else
+                for _, part in pairs(partsInBody) do
+                    if part.CanCollide then isInsideWall = true; break end
+                end
+            end
+
+            hum.WalkSpeed = isInsideWall and 7 or 35
+            
+            for _, p in pairs(char:GetDescendants()) do
+                if p:IsA("BasePart") then p.CanCollide = false end
+            end
+
+            hum:MoveTo(targetPart.Position)
+
+            local dist = (root.Position - targetPart.Position).Magnitude
+            if dist < 7 then
+                if math.abs(root.Position.Y - targetPart.Position.Y) > 2 then
+                    root.CFrame = root.CFrame * CFrame.new(0, -0.5, 0)
+                end
+                
+                interact(prompt)
+                task.wait(0.5) 
+                
+                if not prompt.Enabled or not prompt.Parent then
+                    connection:Disconnect()
+                    if floor then floor:Destroy() end
+                    
+                    -- CHẠY CHUỖI RESET RỒI MỚI PLAY AGAIN
+                    resetAndPlayAgain()
+                end
+            end
+        end)
+    end
+end
+
+player.CharacterAdded:Connect(function()
+    task.wait(3)
+    startAutoFarm()
+end)
+
+startAutoFarm()
