@@ -10,15 +10,12 @@ local function getPowerPlantTarget()
     
     local target, dist = nil, math.huge
     for _, v in pairs(workspace:GetDescendants()) do
-        -- Chỉ tìm ProximityPrompt đang bật
         if v:IsA("ProximityPrompt") and v.Enabled then
-            -- LỌC CHÍNH XÁC: Chỉ lấy cái có chữ "Repair" hoặc "Power"
             local text = (v.ActionText .. v.ObjectText):lower()
             if text:find("repair") or text:find("power") then
                 local p = v.Parent:IsA("BasePart") and v.Parent or v.Parent:FindFirstChildWhichIsA("BasePart", true)
                 if p then
                     local d = (char.HumanoidRootPart.Position - p.Position).Magnitude
-                    -- Ưu tiên cái gần nhân vật nhất trong số các bảng điện
                     if d < dist then 
                         dist = d
                         target = p 
@@ -30,26 +27,27 @@ local function getPowerPlantTarget()
     return target
 end
 
-local targetPart = getPowerPlantTarget()
+-- 2. Vòng lặp chờ đợi cho đến khi tìm thấy
+local targetPart = nil
+print("🔍 Đang tìm bảng điện...")
 
--- 2. GHIM NHÌN (Chỉ xoay cam, không tách rời thân)
-if targetPart then
-    print("🎯 Đã tìm đúng mục tiêu: " .. targetPart.Name)
-    RunService.RenderStepped:Connect(function()
-        if targetPart and targetPart.Parent and player.Character then
-            -- Lấy vị trí camera hiện tại (đang bám theo người)
-            local currentPos = camera.CFrame.Position
-            -- Ép ống kính nhìn thẳng vào bảng điện
-            camera.CFrame = CFrame.lookAt(currentPos, targetPart.Position)
-        end
-    end)
-else
-    print("⚠️ Không tìm thấy bảng điện nào quanh đây!")
-end
+repeat
+    targetPart = getPowerPlantTarget()
+    if not targetPart then
+        task.wait(1) -- Chờ 1 giây rồi quét lại để tránh lag máy
+    end
+until targetPart
 
+-- 3. Khi đã tìm thấy, tiến hành GHIM NHÌN
+print("🎯 Đã tìm thấy mục tiêu: " .. targetPart.Name)
 
-
-
+RunService.RenderStepped:Connect(function()
+    if targetPart and targetPart.Parent and player.Character then
+        local currentPos = camera.CFrame.Position
+        camera.CFrame = CFrame.lookAt(currentPos, targetPart.Position)
+    end
+end)
+Wait(1)
 
 
 
@@ -75,28 +73,28 @@ end
 -- HÀM RESET XONG MỚI ĐỢI NHẤN PLAY AGAIN
 local function resetAndPlayAgain()
     print("⌨️ Bước 1: Đang thực hiện chuỗi Reset...")
-    task.wait(0.5)
+    task.wait(0.2)
 
     -- Thực hiện Reset qua Menu
     VIM:SendKeyEvent(true, Enum.KeyCode.Escape, false, game)
-    task.wait(0.5)
+    task.wait(0.2)
 
     for i = 1, 2 do
         VIM:SendKeyEvent(true, Enum.KeyCode.R, false, game)
-        task.wait(0.3)
+        task.wait(0.15)
         VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-        task.wait(0.3)
+        task.wait(0.15)
     end
-    task.wait(0.3)
+    task.wait(0.1)
 
     local screen = workspace.CurrentCamera.ViewportSize
     for i = 1, 2 do
         VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-        task.wait(1)
-        VIM:SendMouseButtonEvent(screen.X / 2, screen.Y / 2, 0, true, game, 1)
-        task.wait(0.1)
-        VIM:SendMouseButtonEvent(screen.X / 2, screen.Y / 2, 0, false, game, 1)
         task.wait(0.5)
+        VIM:SendMouseButtonEvent(screen.X / 2, screen.Y / 2, 0, true, game, 1)
+        task.wait(0.05)
+        VIM:SendMouseButtonEvent(screen.X / 2, screen.Y / 2, 0, false, game, 1)
+        task.wait(0.2)
     end
 
     -- Bước 2: Đợi hiện bảng để nhấn Play Again
@@ -108,27 +106,21 @@ local function resetAndPlayAgain()
             for _, v in pairs(pGui:GetDescendants()) do
                 -- Tìm nút Play Again đang hiển thị
                 if v:IsA("TextButton") and v.Text:find("Play Again") and v.Visible then
-                    print("🎯 Đã thấy nút! Chờ 2 giây...")
-                    task.wait(2) -- Đợi đúng 2 giây theo yêu cầu
-                    
-                    -- Thực hiện nhấn
                     GuiService.SelectedObject = v
                     VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-                    task.wait(0.1)
+                    task.wait(0.05)
                     VIM:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
                     
-                    -- Click dự phòng
                     VIM:SendMouseButtonEvent(screen.X / 2, screen.Y / 2, 0, true, game, 1)
-                    task.wait(0.1)
+                    task.wait(0.05)
                     VIM:SendMouseButtonEvent(screen.X / 2, screen.Y / 2, 0, false, game, 1)
                     
-                    print("✅ Đã nhấn Play Again!")
                     clicked = true
                     break
                 end
             end
         end
-        task.wait(1) -- Quét mỗi giây 1 lần
+        task.wait(0.5)
     end
 end
 
@@ -169,15 +161,25 @@ local function startAutoFarm()
 
         local connection
         connection = RunService.Stepped:Connect(function()
+            -- KIỂM TRA CHẾT ĐỂ PLAY AGAIN
+            if hum.Health <= 0 or not char.Parent then
+                connection:Disconnect()
+                if floor then floor:Destroy() end
+                resetAndPlayAgain()
+                return
+            end
+
             if not char or not root or not prompt.Parent or not hum then 
                 if floor then floor:Destroy() end
                 if connection then connection:Disconnect() end
                 return 
             end
 
-            floor.CFrame = root.CFrame * CFrame.new(0, -3, 0)
+            -- GIỮ SÀN PHẲNG
+            local flatRotation = CFrame.Angles(0, math.rad(root.Orientation.Y), 0)
+            floor.CFrame = CFrame.new(root.Position.X, root.Position.Y - 3.05, root.Position.Z) * flatRotation
             
-            -- QUÉT TƯỜNG (Sát 1 stud mới chậm)
+            -- QUÉT TƯỜNG (CODE GỐC CỦA BẠN)
             local isInsideWall = false
             local rParams = RaycastParams.new()
             rParams.FilterDescendantsInstances = {char, floor}
@@ -199,7 +201,15 @@ local function startAutoFarm()
                 end
             end
 
-            hum.WalkSpeed = isInsideWall and 7 or 35
+            -- CHỈNH TỐC ĐỘ: PHANH LẠI KHI CÁCH 5 STUD
+            local dist = (root.Position - targetPart.Position).Magnitude
+            if dist < 5 then
+                hum.WalkSpeed = 0
+            elseif isInsideWall then
+                hum.WalkSpeed = 7
+            else
+                hum.WalkSpeed = 35
+            end
             
             for _, p in pairs(char:GetDescendants()) do
                 if p:IsA("BasePart") then p.CanCollide = false end
@@ -207,11 +217,9 @@ local function startAutoFarm()
 
             hum:MoveTo(targetPart.Position)
 
-            local dist = (root.Position - targetPart.Position).Magnitude
+            -- ĐẾN NƠI THÌ DỊCH XUỐNG SÂU
             if dist < 7 then
-                if math.abs(root.Position.Y - targetPart.Position.Y) > 2 then
-                    root.CFrame = root.CFrame * CFrame.new(0, -0.5, 0)
-                end
+                root.CFrame = targetPart.CFrame * CFrame.new(0, -5, 0)
                 
                 interact(prompt)
                 task.wait(0.5) 
@@ -219,8 +227,6 @@ local function startAutoFarm()
                 if not prompt.Enabled or not prompt.Parent then
                     connection:Disconnect()
                     if floor then floor:Destroy() end
-                    
-                    -- CHẠY CHUỖI RESET RỒI MỚI PLAY AGAIN
                     resetAndPlayAgain()
                 end
             end
